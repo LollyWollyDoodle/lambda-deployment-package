@@ -1,5 +1,28 @@
-module.exports = {
-	pack: function (cb) {
+const clean = function (cb) {
+	const rm = require("rimraf");
+	const async = require("async");
+	const packageJson = require("read-package-json")
+	async.parallel([
+		function (cb) { rm("package", cb); },
+		function (cb) {
+			packageJson("package.json", function (er, data) {
+				if (er) {
+					cb(er);
+					return
+				}
+				rm(data.name.replace(/@([a-zA-Z0-9_-]+)\//, "$1-") + "-*", cb);
+			});
+		}
+	], cb);
+};
+
+const pack = function (cb) {
+	clean(function (err) {
+		if (err) {
+			cb(err);
+			return;
+		}
+		
 		const child_process = require("child_process");
 		const process = require("process");
 		const fs = require("fs");
@@ -35,22 +58,16 @@ module.exports = {
 				});
 			});
 		});
+	});
+};
+
+Object.defineProperties(module.exports, {
+	pack: {
+		value: pack,
+		enumerable: true
 	},
-	clean: function (cb) {
-		const rm = require("rimraf");
-		const async = require("async");
-		const packageJson = require("read-package-json")
-		async.parallel([
-			function (cb) { rm("package", cb); },
-			function (cb) {
-				packageJson("package.json", function (er, data) {
-					if (er) {
-						cb(er);
-						return
-					}
-					rm(data.name.replace(/@([a-zA-Z0-9_-]+)\//, "$1-") + "-*", cb);
-				});
-			}
-		], cb);
+	clean: {
+		value: clean,
+		enumerable: true
 	}
-}
+});
