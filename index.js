@@ -1,16 +1,25 @@
+const fs = require("fs");
+
+const async = require("async");
+
+const getName = function (cb) {
+	const packageJson = require("read-package-json");
+	
+	packageJson("package.json", function (er, data) {
+		if (er) return cb(er);
+		
+		cb(null, data.name.replace(/@([a-zA-Z0-9_-]+)\//, "$1-"), data.version);
+	});
+};
+
 const clean = function (cb) {
 	const rm = require("rimraf");
-	const async = require("async");
-	const packageJson = require("read-package-json")
 	async.parallel([
 		function (cb) { rm("package", cb); },
 		function (cb) {
-			packageJson("package.json", function (er, data) {
-				if (er) {
-					cb(er);
-					return
-				}
-				rm(data.name.replace(/@([a-zA-Z0-9_-]+)\//, "$1-") + "-*", cb);
+			getName(function (er, name) {
+				if (er) return cb(er);
+				rm(name + "-*", cb);
 			});
 		}
 	], cb);
@@ -18,14 +27,10 @@ const clean = function (cb) {
 
 const pack = function (cb) {
 	clean(function (err) {
-		if (err) {
-			cb(err);
-			return;
-		}
+		if (err) return cb(err);
 		
 		const child_process = require("child_process");
 		const process = require("process");
-		const fs = require("fs");
 		const zlib = require("zlib");
 		const tar = require("tar");
 		const archiver = require("archiver");
@@ -61,6 +66,23 @@ const pack = function (cb) {
 	});
 };
 
+const deploy = function (bucket, prefix, cb) {
+	const AWS = require("aws-sdk");
+	const s3 = new AWS.S3({ apiVersion: "2006-03-01" });
+	
+	async.waterfall([
+		getName,
+		function (name, version, cb) {
+			s3.putObject({
+				Bucket: bucket,
+				Key: prefix + version,
+				ContentType: "application/zip",
+				Body: fs.createReadStream(name + "-" + version + ".zip")
+			}, cb);
+		}
+	], cb);
+};
+
 Object.defineProperties(module.exports, {
 	pack: {
 		value: pack,
@@ -68,6 +90,10 @@ Object.defineProperties(module.exports, {
 	},
 	clean: {
 		value: clean,
+		enumerable: true
+	},
+	deploy: {
+		value: deploy,
 		enumerable: true
 	}
 });

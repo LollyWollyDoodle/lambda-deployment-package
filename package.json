@@ -1,6 +1,6 @@
 {
   "name": "@lwd/lambda-deployment-package",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Function to create a Lambda deployment package out of an NPM package in the current directory",
   "main": "index.js",
   "repository": {
@@ -14,6 +14,7 @@
   "dependencies": {
     "archiver": "^1.3.0",
     "async": "^2.1.5",
+    "aws-sdk": "^2.35.0",
     "read-package-json": "^2.0.5",
     "rimraf": "^2.6.1",
     "tar": "^2.2.1"
